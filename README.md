@@ -1,16 +1,18 @@
-# AI News Aggregator Agent (Local-First)
+# AI Intelligence Hub (Web Dashboard)
 
 A Python-based autonomous agent that aggregates, analyzes, and catalogs news on new AI technologies, model releases, and benchmarks. 
 
-This project is built with a **Local-First Architecture**, ensuring privacy, avoiding massive API costs for LLM inference, and demonstrating proficiency in handling hardware constraints.
+This project features a **Web Dashboard** built with FastAPI and Vanilla JS/CSS, serving a **Local-First Architecture** background agent that uses local LLM inference (Ollama).
 
 ## Architecture
 
-1.  **Scout (`core/scout.py`)**: A multi-threaded engine that fetches raw links from a list of RSS feeds (OpenAI, Google DeepMind, Hugging Face) and uses Serper.dev to search Google and Twitter for AI benchmarks.
-2.  **Librarian (`core/librarian.py`)**: Uses Firecrawl to scrape the full content of "high-interest" links found by the Scout and converts them into clean Markdown.
-3.  **Analyst (`core/analyst.py`)**: The logic handler. It interfaces with a local LLM via Ollama (`gemma4:e4b` with 4-bit quantization). It analyzes the Markdown to identify new benchmarks or models, extracting the Company Name, Model Name, Specific Metrics, and an Innovation Summary. It also generates a semantic hash for deduplication.
-4.  **Reporter (`core/reporter.py`)**: Handles data storage. It checks the semantic hash against existing entries to prevent duplicates, and appends new, unique data to a formatted `ai_intelligence_report.xlsx` file.
-5.  **Main (`main.py`)**: An asynchronous orchestration script that runs the entire pipeline.
+1.  **FastAPI Backend (`app.py`)**: Serves the web interface and handles the background agent orchestration.
+2.  **Agent Runner (`core/agent_runner.py`)**: Runs asynchronously in the background. It implements a 6-hour continuous loop that **only executes if the laptop is plugged into AC power**.
+3.  **Scout (`core/scout.py`)**: Fetches raw links from RSS feeds and Serper.dev.
+4.  **Librarian (`core/librarian.py`)**: Uses Firecrawl to scrape full content.
+5.  **Analyst (`core/analyst.py`)**: The logic handler interfacing with local Ollama (`gemma4:e4b`).
+6.  **Reporter (`core/reporter.py`)**: Saves structured JSON to `ai_intelligence_report.xlsx` and handles deduplication via Semantic Hashing.
+7.  **Web Frontend (`static/`)**: A premium dark-mode glassmorphism dashboard to view data and control the agent.
 
 ## Prerequisites
 
@@ -34,18 +36,13 @@ This project is built with a **Local-First Architecture**, ensuring privacy, avo
     ```
 
 3.  **Pull the Local LLM:**
-    Ensure Ollama is running, then pull the target Gemma 4 model (or your preferred local model):
     ```bash
     ollama run gemma4:e4b
     ```
-    *Note: Adjust the model name in `core/analyst.py` if you use a different tag.*
 
-4.  **Run the Agent:**
-    Execute the main pipeline:
+4.  **Start the Dashboard:**
+    Start the FastAPI server using Uvicorn:
     ```bash
-    python main.py
+    uvicorn app:app --reload
     ```
-
-## Deduplication Logic
-
-The agent uses **Semantic Hashing** to ensure the same news from different sources is merged into a single entry. The local Gemma model is prompted to extract the core essence of the innovation (e.g., "Llama-3-70B-Release") which acts as a unique identifier before saving to the `.xlsx` report.
+    Then, open your browser and navigate to `http://localhost:8000`. You can start the background agent directly from the web interface!

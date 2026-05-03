@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Intelligence Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>AI Intelligence Hub</h1>
+            <p class="subtitle">Autonomous News Aggregation & Analysis</p>
+        </header>
+
+        <main>
+            <!-- Control Panel -->
+            <section class="glass-card control-panel">
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <div class="status-text">
+                        <span class="label">Agent Status:</span>
+                        <span class="value" id="statusValue">Checking...</span>
+                    </div>
+                </div>
+                <div class="status-indicator battery-indicator">
+                    <span class="label">Power Status:</span>
+                    <span class="value" id="batteryValue">Checking...</span>
+                </div>
+                
+                <div class="controls">
+                    <button id="startBtn" class="btn btn-primary" onclick="startAgent()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        Start Agent
+                    </button>
+                    <button id="stopBtn" class="btn btn-danger" onclick="stopAgent()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                        Stop Agent
+                    </button>
+                </div>
+            </section>
+
+            <!-- News Grid -->
+            <section class="glass-card data-section">
+                <h2>Latest Intelligence</h2>
+                <div class="table-container">
+                    <table id="newsTable">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Model</th>
+                                <th>Metrics</th>
+                                <th>Innovation Summary</th>
+                                <th>Source</th>
+                            </tr>
+                        </thead>
+                        <tbody id="newsTableBody">
+                            <tr><td colspan="5" class="loading">Loading intelligence data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
