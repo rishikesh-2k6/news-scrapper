@@ -45,7 +45,8 @@ class AgentRunner:
             
         url = link_info.get("link")
         title = link_info.get("title")
-        print(f"\n--- Processing: {title} ---")
+        safe_title = title.encode('ascii', 'ignore').decode('ascii') if title else "Unknown Title"
+        print(f"\n--- Processing: {safe_title} ---")
         
         markdown = await self.librarian.extract_markdown(url)
         if not markdown or self.stop_event.is_set():

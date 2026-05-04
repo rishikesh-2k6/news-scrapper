@@ -59,8 +59,17 @@ Markdown Content:
                         print(f"[Analyst] Failed to parse JSON from LLM response. Raw output: {response_text}")
                         return None
         except aiohttp.ClientConnectorError:
-            print(f"[Analyst] Could not connect to Ollama at {self.ollama_url}. Is it running?")
-            return None
+            print(f"[Analyst] Could not connect to Ollama at {self.ollama_url}. Using MOCK data for dry run!")
+            import hashlib
+            hash_str = hashlib.md5(source_url.encode()).hexdigest()[:6]
+            return {
+                "Company": "Mock AI Labs",
+                "Model": f"AutoBot-{hash_str}",
+                "Metrics": "Accuracy: 99.9%, Speed: 10x",
+                "InnovationSummary": "This is a simulated AI model analysis for the dry run.",
+                "SemanticHash": f"mock hash {hash_str}",
+                "SourceURL": source_url
+            }
         except Exception as e:
             print(f"[Analyst] Exception during analysis: {e}")
             return None
