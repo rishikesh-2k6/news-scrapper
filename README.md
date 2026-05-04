@@ -11,7 +11,7 @@ This project features a **Web Dashboard** built with FastAPI and Vanilla JS/CSS,
 3.  **Scout (`core/scout.py`)**: Fetches raw links from RSS feeds and Serper.dev, with URL-level deduplication.
 4.  **Librarian (`core/librarian.py`)**: Uses Firecrawl (v1 API) to scrape full article content as Markdown.
 5.  **Analyst (`core/analyst.py`)**: The logic handler interfacing with local Ollama (`gemma3:4b`).
-6.  **Reporter (`core/reporter.py`)**: Saves structured data to `ai_intelligence_report.xlsx` with Semantic Hash deduplication and thread-safe writes.
+6.  **Reporter (`core/reporter.py`)**: Saves structured data to `ai_intelligence_report.csv` with Semantic Hash deduplication and thread-safe writes.
 7.  **Web Frontend (`static/`)**: A premium dark-mode glassmorphism dashboard to view data and control the agent.
 
 ## Prerequisites

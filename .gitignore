@@ -14,7 +14,7 @@ env.bak/
 venv.bak/
 
 # Project specific
-ai_intelligence_report.xlsx
+ai_intelligence_report.csv
 
 # IDE / editor
 .vscode/

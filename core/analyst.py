@@ -1,8 +1,10 @@
 """
 Analyst Module
 --------------
-Interfaces with a local Ollama LLM to decide whether an article describes
-a new AI model/benchmark and, if so, extracts structured metadata.
+Elite AI Intelligence Analyst + Content Strategist.
+
+Interfaces with a local Ollama LLM to classify, score, extract, and
+generate content-ready insights from scraped AI/tech articles.
 
 Falls back to mock data when Ollama is unreachable (useful for dry-runs).
 """
@@ -19,6 +21,104 @@ MAX_CONTEXT_CHARS = 8000
 
 # Timeout for Ollama requests (local inference can be slow on CPU)
 OLLAMA_TIMEOUT = 300  # 5 minutes
+
+# The elite analyst system prompt
+SYSTEM_PROMPT = """You are an Elite AI Intelligence Analyst + Content Strategist.
+
+Your goal is to extract HIGH-VALUE, CONTENT-WORTHY insights from AI/tech updates.
+
+----------------------------------
+STEP 1: CLASSIFY CONTENT
+----------------------------------
+
+Classify into ONE:
+
+- NEW_MODEL → new AI model release
+- FEATURE_UPDATE → new feature in existing AI product
+- TOOL_RELEASE → new tool / API / framework
+- RESEARCH → new method / architecture / paper
+- INDUSTRY → company move / strategy
+- LOW_VALUE → ignore
+
+----------------------------------
+STEP 2: RELEVANCE FILTER
+----------------------------------
+
+KEEP if:
+- It introduces something new
+- OR improves something significantly
+- OR is useful for developers/users
+- OR can become engaging content
+
+Else:
+RETURN {"status": "DISCARD"}
+
+----------------------------------
+STEP 3: IMPACT SCORING
+----------------------------------
+
+Score (1–10):
+
+9–10 → Game-changing (new model / major feature)
+7–8 → Strong feature/tool update
+5–6 → Useful but not groundbreaking
+<5 → discard
+
+----------------------------------
+STEP 4: EXTRACTION
+----------------------------------
+
+Extract:
+
+- company
+- name (model / feature / tool)
+- category
+- innovation (what changed)
+- use_case (who benefits & how)
+- technical_depth (low / medium / high)
+
+Benchmark is OPTIONAL:
+- Include ONLY if present
+- Else return "N/A"
+
+----------------------------------
+STEP 5: CONTENT ENGINE
+----------------------------------
+
+Generate:
+
+hook:
+- Short, curiosity-driven
+
+explanation:
+- Simple and clear
+
+why_it_matters:
+- Real-world value
+
+content_idea:
+- Specific idea for video/post
+
+----------------------------------
+OUTPUT (STRICT JSON)
+----------------------------------
+
+{
+  "status": "KEEP",
+  "category": "",
+  "impact_score": 0,
+  "company": "",
+  "name": "",
+  "innovation": "",
+  "use_case": "",
+  "technical_depth": "",
+  "benchmark": "",
+  "hook": "",
+  "explanation": "",
+  "why_it_matters": "",
+  "content_idea": ""
+}
+"""
 
 
 class Analyst:
@@ -44,21 +144,8 @@ class Analyst:
         truncated = markdown_content[:MAX_CONTEXT_CHARS]
 
         prompt = (
-            "You are an expert AI news analyst. Review the following markdown "
-            "text extracted from an article.\n"
-            "Determine if the article is about a *new AI model release* or a "
-            "*new AI benchmark*.\n\n"
-            "If it is NOT about a new model or benchmark, reply with ONLY the "
-            'JSON object: {"verdict": "NOT_RELEVANT"}\n\n'
-            "If it IS relevant, return ONLY a JSON object with these keys:\n"
-            '- "Company": The name of the company or organisation.\n'
-            '- "Model": The name of the AI model.\n'
-            '- "Metrics": A brief summary of any specific metrics mentioned '
-            '(e.g., "MMLU: 85%, GSM8K: 92%"). If none, put "None".\n'
-            '- "InnovationSummary": A 1-sentence summary of the core innovation.\n'
-            '- "SemanticHash": A short 3-5 word string summarising the core '
-            'entity/innovation for deduplication (e.g., "Meta Llama 3 70B").\n\n'
-            "Markdown Content:\n"
+            f"{SYSTEM_PROMPT}\n\n"
+            f"Now analyse the following article:\n\n"
             f"{truncated}\n"
         )
 
@@ -100,18 +187,39 @@ class Analyst:
                         )
                         return None
 
-                    # Check for NOT_RELEVANT verdict
-                    if (
-                        data.get("verdict", "").upper() == "NOT_RELEVANT"
-                        or "NOT_RELEVANT" in response_text.upper()
-                    ):
-                        print("[Analyst] Content determined to be not relevant.")
+                    # Check for DISCARD verdict
+                    status = str(data.get("status", "")).upper()
+                    if status == "DISCARD":
+                        print("[Analyst] Content classified as DISCARD.")
+                        return None
+
+                    # Check for LOW_VALUE category
+                    category = str(data.get("category", "")).upper()
+                    if category == "LOW_VALUE":
+                        print("[Analyst] Content classified as LOW_VALUE.")
+                        return None
+
+                    # Check impact score — discard if below threshold
+                    try:
+                        impact = int(data.get("impact_score", 0))
+                    except (ValueError, TypeError):
+                        impact = 0
+                    if impact < 5:
+                        print(f"[Analyst] Impact score too low ({impact}). Discarding.")
                         return None
 
                     # Ensure essential fields exist
-                    if not data.get("SemanticHash"):
-                        print("[Analyst] LLM response missing SemanticHash. Skipping.")
+                    name = data.get("name", "")
+                    company = data.get("company", "")
+                    if not name and not company:
+                        print("[Analyst] LLM response missing name and company. Skipping.")
                         return None
+
+                    # Generate a SemanticHash for deduplication from company+name
+                    raw_hash = f"{company} {name}".strip().lower()
+                    data["SemanticHash"] = raw_hash if raw_hash else hashlib.md5(
+                        source_url.encode()
+                    ).hexdigest()[:10]
 
                     data["SourceURL"] = source_url
                     return data
@@ -134,10 +242,19 @@ class Analyst:
         """Generate deterministic mock data when Ollama is unavailable."""
         hash_str = hashlib.md5(source_url.encode()).hexdigest()[:6]
         return {
-            "Company": "Mock AI Labs",
-            "Model": f"AutoBot-{hash_str}",
-            "Metrics": "Accuracy: 99.9%, Speed: 10x",
-            "InnovationSummary": "Simulated AI model analysis for the dry run.",
-            "SemanticHash": f"mock hash {hash_str}",
+            "status": "KEEP",
+            "category": "NEW_MODEL",
+            "impact_score": 8,
+            "company": "Mock AI Labs",
+            "name": f"AutoBot-{hash_str}",
+            "innovation": "A simulated breakthrough in neural architecture.",
+            "use_case": "Developers building AI-powered applications.",
+            "technical_depth": "medium",
+            "benchmark": "MMLU: 92%, HumanEval: 88%",
+            "hook": "This model just changed the game.",
+            "explanation": "A new model that pushes the state of the art.",
+            "why_it_matters": "Faster, cheaper, and more capable AI for everyone.",
+            "content_idea": "Comparison video: AutoBot vs GPT-4o on coding tasks.",
+            "SemanticHash": f"mock ai labs autobot-{hash_str}",
             "SourceURL": source_url,
         }

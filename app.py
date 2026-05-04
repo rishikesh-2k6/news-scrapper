@@ -67,12 +67,12 @@ async def stop_agent():
 @app.get("/api/news")
 async def get_news():
     """Read the Excel report and return all rows as JSON."""
-    file_path = "ai_intelligence_report.xlsx"
+    file_path = "ai_intelligence_report.csv"
     if not os.path.exists(file_path):
         return {"data": []}
 
     try:
-        df = pd.read_excel(file_path)
+        df = pd.read_csv(file_path)
         # Replace NaN, Inf, -Inf, and NaT with None for JSON serialisation
         df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
         df = df.where(df.notna(), None)
