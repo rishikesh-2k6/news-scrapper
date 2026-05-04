@@ -2,6 +2,7 @@ feedparser
 requests
 aiohttp
 pandas
+numpy
 openpyxl
 python-dotenv
 fastapi

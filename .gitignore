@@ -1,4 +1,4 @@
-# Environment variables
+# Environment variables (contains API keys — never commit)
 .env
 
 # Python cache
@@ -15,3 +15,13 @@ venv.bak/
 
 # Project specific
 ai_intelligence_report.xlsx
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Gemini AI workspace files
+.gemini/
+implementation_plan.md

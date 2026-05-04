@@ -1,69 +1,90 @@
-// Global State
-let agentStatus = "Stopped";
+/**
+ * AI Intelligence Hub — Dashboard Controller
+ * Handles status polling, agent start/stop, and news data rendering
+ * with XSS-safe DOM manipulation.
+ */
+
+// ── State ──────────────────────────────────────────────────────────────
 let statusInterval = null;
 let dataInterval = null;
 
-// DOM Elements
-const statusDot = document.getElementById('statusDot');
-const statusValue = document.getElementById('statusValue');
-const batteryValue = document.getElementById('batteryValue');
-const startBtn = document.getElementById('startBtn');
-const stopBtn = document.getElementById('stopBtn');
-const tableBody = document.getElementById('newsTableBody');
+// ── Helpers ────────────────────────────────────────────────────────────
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
+/** Escape HTML entities to prevent XSS when rendering user/LLM text. */
+function escapeHtml(str) {
+    if (!str) return "";
+    const div = document.createElement("div");
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
+// ── Initialise ─────────────────────────────────────────────────────────
+
+document.addEventListener("DOMContentLoaded", () => {
     fetchStatus();
     fetchNews();
-    
-    // Poll status every 2 seconds
-    statusInterval = setInterval(fetchStatus, 2000);
-    // Poll data every 10 seconds
-    dataInterval = setInterval(fetchNews, 10000);
+
+    // Poll status every 3 seconds (reduced from 2 to ease server load)
+    statusInterval = setInterval(fetchStatus, 3000);
+    // Poll data every 15 seconds
+    dataInterval = setInterval(fetchNews, 15000);
 });
 
-// Fetch Agent Status
+// ── Status ─────────────────────────────────────────────────────────────
+
 async function fetchStatus() {
+    const statusDot = document.getElementById("statusDot");
+    const statusValue = document.getElementById("statusValue");
+    const batteryValue = document.getElementById("batteryValue");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
     try {
-        const response = await fetch('/api/status');
+        const response = await fetch("/api/status");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        
-        agentStatus = data.status;
+
+        const agentStatus = data.status || "Unknown";
         const isPlugged = data.battery_plugged;
-        
-        // Update UI
+
         statusValue.textContent = agentStatus;
         batteryValue.textContent = isPlugged ? "Plugged In (AC)" : "On Battery";
         batteryValue.style.color = isPlugged ? "#10b981" : "#f59e0b";
-        
-        // Update Dot
-        statusDot.className = 'status-dot';
-        if (agentStatus.includes("Running") || agentStatus.includes("Starting") || agentStatus.includes("Sleeping")) {
-            statusDot.classList.add('running');
+
+        // Update status indicator dot
+        statusDot.className = "status-dot";
+        if (
+            agentStatus.includes("Running") ||
+            agentStatus.includes("Starting") ||
+            agentStatus.includes("Sleeping")
+        ) {
+            statusDot.classList.add("running");
             startBtn.disabled = true;
             stopBtn.disabled = false;
         } else if (agentStatus.includes("Paused")) {
-            statusDot.classList.add('paused');
+            statusDot.classList.add("paused");
             startBtn.disabled = true;
             stopBtn.disabled = false;
         } else {
-            statusDot.classList.add('stopped');
+            statusDot.classList.add("stopped");
             startBtn.disabled = false;
             stopBtn.disabled = true;
         }
-        
     } catch (error) {
         console.error("Error fetching status:", error);
         statusValue.textContent = "Server Offline";
-        statusDot.className = 'status-dot stopped';
+        statusDot.className = "status-dot stopped";
     }
 }
 
-// Start Agent
+// ── Agent Controls ─────────────────────────────────────────────────────
+
 async function startAgent() {
+    const startBtn = document.getElementById("startBtn");
     startBtn.disabled = true;
     try {
-        await fetch('/api/start', { method: 'POST' });
+        const res = await fetch("/api/start", { method: "POST" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         fetchStatus();
     } catch (error) {
         console.error("Error starting agent:", error);
@@ -71,11 +92,12 @@ async function startAgent() {
     }
 }
 
-// Stop Agent
 async function stopAgent() {
+    const stopBtn = document.getElementById("stopBtn");
     stopBtn.disabled = true;
     try {
-        await fetch('/api/stop', { method: 'POST' });
+        const res = await fetch("/api/stop", { method: "POST" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         fetchStatus();
     } catch (error) {
         console.error("Error stopping agent:", error);
@@ -83,38 +105,65 @@ async function stopAgent() {
     }
 }
 
-// Fetch News Data
+// ── News Table ─────────────────────────────────────────────────────────
+
 async function fetchNews() {
+    const tableBody = document.getElementById("newsTableBody");
     try {
-        const response = await fetch('/api/news');
+        const response = await fetch("/api/news");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
-        const data = result.data;
-        
+        const data = result.data || [];
+
         if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" class="loading">No intelligence data gathered yet. Start the agent!</td></tr>';
+            tableBody.innerHTML =
+                '<tr><td colspan="5" class="loading">No intelligence data yet. Start the agent!</td></tr>';
             return;
         }
-        
-        // Reverse array to show newest first (assuming appended rows are newer)
+
+        // Show newest first
         const reversedData = [...data].reverse();
-        
-        tableBody.innerHTML = '';
-        reversedData.forEach(item => {
-            const tr = document.createElement('tr');
-            
-            // Format link
-            const urlStr = item.SourceURL ? `<a href="${item.SourceURL}" target="_blank">View Article</a>` : 'N/A';
-            
-            tr.innerHTML = `
-                <td><strong>${item.Company || 'N/A'}</strong></td>
-                <td>${item.Model || 'N/A'}</td>
-                <td><small>${item.Metrics || 'N/A'}</small></td>
-                <td>${item.InnovationSummary || 'N/A'}</td>
-                <td>${urlStr}</td>
-            `;
+
+        // Build rows safely (no innerHTML with unsanitised data)
+        tableBody.innerHTML = "";
+        reversedData.forEach((item) => {
+            const tr = document.createElement("tr");
+
+            const tdCompany = document.createElement("td");
+            const strong = document.createElement("strong");
+            strong.textContent = item.Company || "N/A";
+            tdCompany.appendChild(strong);
+
+            const tdModel = document.createElement("td");
+            tdModel.textContent = item.Model || "N/A";
+
+            const tdMetrics = document.createElement("td");
+            const small = document.createElement("small");
+            small.textContent = item.Metrics || "N/A";
+            tdMetrics.appendChild(small);
+
+            const tdSummary = document.createElement("td");
+            tdSummary.textContent = item.InnovationSummary || "N/A";
+
+            const tdSource = document.createElement("td");
+            if (item.SourceURL) {
+                const a = document.createElement("a");
+                a.href = item.SourceURL;
+                a.target = "_blank";
+                a.rel = "noopener noreferrer";
+                a.textContent = "View Article";
+                tdSource.appendChild(a);
+            } else {
+                tdSource.textContent = "N/A";
+            }
+
+            tr.appendChild(tdCompany);
+            tr.appendChild(tdModel);
+            tr.appendChild(tdMetrics);
+            tr.appendChild(tdSummary);
+            tr.appendChild(tdSource);
             tableBody.appendChild(tr);
         });
-        
     } catch (error) {
         console.error("Error fetching news:", error);
     }
