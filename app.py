@@ -53,5 +53,9 @@ async def get_news():
         records = df.to_dict(orient="records")
         return {"data": records}
     except Exception as e:
-        print(f"Error reading Excel file: {e}")
         return {"data": []}
+
+if __name__ == "__main__":
+    import uvicorn
+    print("Starting AI Intelligence Dashboard...")
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
